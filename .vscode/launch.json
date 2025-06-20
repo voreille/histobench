@@ -1,0 +1,57 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python Debugger: Current File",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Python: Compute Embeddings TCGA-UT",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/histobench/evaluation/compute_embeddings_tcga_ut.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--model",
+                "resnet50",
+                "--magnification-key",
+                "5",
+                "--tcga-ut-dir",
+                "data/tcga-ut",
+                "--gpu-id",
+                "1",
+                "--batch-size",
+                "256",
+                "--num-workers",
+                "24",
+                "--embeddings-path",
+                "data/embeddings/tcga_ut/resnet50__mag_key_5.h5"
+            ]
+        },
+        {
+            "name": "Python: Evaluate TCGA-UT",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/histobench/evaluation/evaluate_tcag_ut.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--csv-split-path",
+                "data/tcga-ut/train_val_test_split.csv",
+                "--embeddings-path",
+                "data/embeddings/tcga_ut/resnet50__mag_key_5.h5",
+                "--split-type",
+                "internal",
+                "--knn-n-neighbors",
+                "5",
+                "--knn-num-workers",
+                "24"
+            ]
+        }
+    ]
+}
