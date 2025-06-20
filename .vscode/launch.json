@@ -19,7 +19,9 @@
             "console": "integratedTerminal",
             "args": [
                 "--model",
-                "resnet50",
+                "moco_superpixel_cluster_bioptimus",
+                "--model-weights-path",
+                "/mnt/nas7/data/Personal/Darya/Checkpoints/superpixel_cluster_clean/cluster_bioptimus_bs256_lr0.003_epochs100_clusters50_moco_superpixel_cluster_bioptimus/best_model.pth",
                 "--magnification-key",
                 "5",
                 "--tcga-ut-dir",
@@ -31,7 +33,7 @@
                 "--num-workers",
                 "24",
                 "--embeddings-path",
-                "data/embeddings/tcga_ut/resnet50__mag_key_5.h5"
+                "data/embeddings/tcga_ut/test_darya.h5"
             ]
         },
         {
@@ -44,13 +46,11 @@
                 "--csv-split-path",
                 "data/tcga-ut/train_val_test_split.csv",
                 "--embeddings-path",
-                "data/embeddings/tcga_ut/resnet50__mag_key_5.h5",
-                "--split-type",
-                "internal",
+                "data/embeddings/tcga_ut/moco_superpixel_cluster_bioptimus__mag_key_5.h5",
                 "--knn-n-neighbors",
                 "5",
-                "--knn-num-workers",
-                "24"
+                "--report-path",
+                "reports/tcga-ut/test_darya.csv",
             ]
         }
     ]

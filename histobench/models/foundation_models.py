@@ -11,7 +11,7 @@ from torchvision.models import ResNet50_Weights, resnet50
 
 load_dotenv()
 
-MODEL_NAMES = [
+FOUNDATION_MODEL_NAMES = [
     "H-optimus-0",
     "H-optimus-1",
     "UNI2",
@@ -23,8 +23,8 @@ MODEL_NAMES = [
 
 def load_model(model_name, device, apply_torch_scripting=True):
     """Load the model dynamically based on the model name."""
-    if model_name not in MODEL_NAMES:
-        raise ValueError(f"Model {model_name} is not supported. Supported models: {MODEL_NAMES}")
+    if model_name not in FOUNDATION_MODEL_NAMES:
+        raise ValueError(f"Model {model_name} is not supported. Supported models: {FOUNDATION_MODEL_NAMES}")
     if model_name == "H-optimus-0":
         login(token=os.getenv("HUGGING_FACE_TOKEN"))
         model = timm.create_model(
@@ -99,6 +99,7 @@ def load_model(model_name, device, apply_torch_scripting=True):
     elif model_name == "resnet50":
         weights = ResNet50_Weights.DEFAULT
         model = resnet50(weights=weights)
+        model.fc = torch.nn.Identity()  # Remove the final classification layer
         preprocess = transforms.Compose(
             [
                 transforms.Resize((224, 224)),

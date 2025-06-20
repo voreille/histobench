@@ -8,8 +8,10 @@ import torch
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
+from histobench.darya_code.get_model_inference import model_cls_map
 from histobench.data.torch_datasets import ImageDataset
-from histobench.models.foundation_models import MODEL_NAMES, load_model
+from histobench.models.foundation_models import FOUNDATION_MODEL_NAMES
+from histobench.models.foundation_models import load_model as load_foundation_model
 from histobench.models.load_models import load_pretrained_encoder
 from histobench.utils import get_device
 
@@ -17,20 +19,6 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 project_dir = Path(__file__).parents[2].resolve()
-
-
-def load_encoder(model_name, device):
-    if model_name in MODEL_NAMES:
-        return load_model(model_name, device=device, apply_torch_scripting=True)
-
-    weights_paths = Path(model_name)
-    if not weights_paths.exists():
-        raise ValueError(f"Model {model_name} is not supported. Supported models: {MODEL_NAMES}")
-
-    return load_pretrained_encoder(
-        weights_paths,
-        device=device,
-    )
 
 
 def compute_embeddings(model, dataloader, device="cuda"):
@@ -74,8 +62,11 @@ def load_embeddings(embeddings_path):
 
 
 @click.command()
+@click.option("--model", default="UNI2", help="Name of the model to use for embeddings.")
 @click.option(
-    "--model", default="UNI2", help="Either a model name or a path to the model weights."
+    "--model-weights-path",
+    default=None,
+    help="Either a model name or a path to the model weights.",
 )
 @click.option("--magnification-key", default=5, help="Magnification key for the model")
 @click.option(
@@ -99,7 +90,16 @@ def load_embeddings(embeddings_path):
     required=True,
     help="Name of the model to use.",
 )
-def main(model, magnification_key, tcga_ut_dir, gpu_id, batch_size, num_workers, embeddings_path):
+def main(
+    model,
+    model_weights_path,
+    magnification_key,
+    tcga_ut_dir,
+    gpu_id,
+    batch_size,
+    num_workers,
+    embeddings_path,
+):
     """Simple CLI program to greet someone"""
     tcga_ut_rootdir = Path(tcga_ut_dir).resolve()
     image_paths = list(tcga_ut_rootdir.rglob(f"*/{magnification_key}/*/*.jpg"))
@@ -117,7 +117,17 @@ def main(model, magnification_key, tcga_ut_dir, gpu_id, batch_size, num_workers,
     logger.info(f"Using device: {device}")
 
     logger.info(f"Loading model: {model}")
-    encoder, preprocess, _, _ = load_encoder(model, get_device(gpu_id))
+
+    if model in FOUNDATION_MODEL_NAMES:
+        encoder, preprocess, _, _ = load_foundation_model(model, get_device(gpu_id))
+
+    elif model in model_cls_map and model_weights_path is not None:
+        encoder, preprocess = load_pretrained_encoder(model, model_weights_path, device=device)
+
+    else:
+        raise ValueError(
+            f"Model {model} is not supported or model_weights_path is required for this model."
+        )
 
     dataset = ImageDataset(
         image_paths=image_paths,
