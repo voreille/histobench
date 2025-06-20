@@ -2,6 +2,7 @@ import logging
 from pathlib import Path
 
 import click
+import numpy as np
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
@@ -133,13 +134,17 @@ def main(
     report_path = project_dir / report_path
 
     embeddings, image_paths = load_embeddings(embeddings_path)
+
+    norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
+    embeddings = embeddings / (norms + 1e-8)  # add epsilon to avoid division by zero
+
     image_paths = [Path(path) for path in image_paths]
     labels = [path.parents[2].name for path in image_paths]
 
     # Convert labels to binary (0/1) for two-class problem
     unique_labels = sorted(set(labels))
     label_map = {label: idx for idx, label in enumerate(unique_labels)}
-    y = [label_map[l] for l in labels]
+    y = [label_map[label] for label in labels]
 
     all_report_rows = []
 
