@@ -1,14 +1,14 @@
 #!/bin/bash
 
 # Variables for compute_embeddings_lunghist700.py
-# MODEL="resnet50"
-MODEL="moco_superpixel_cluster_bioptimus"
-# WEIGHTS_PATH=""  # Leave empty if not needed
-WEIGHTS_PATH="/mnt/nas7/data/Personal/Darya/Checkpoints/superpixel_cluster_clean/cluster_bioptimus_bs256_lr0.003_epochs100_clusters50_moco_superpixel_cluster_bioptimus/best_model.pth"
+MODEL="H-optimus-0"  # Change to your desired model
+# MODEL="moco_superpixel_cluster_bioptimus"
+WEIGHTS_PATH=""  # Leave empty if not needed
+# WEIGHTS_PATH="/mnt/nas7/data/Personal/Darya/Checkpoints/superpixel_cluster_clean/cluster_bioptimus_bs256_lr0.003_epochs100_clusters50_moco_superpixel_cluster_bioptimus/best_model.pth"
 INPUT_DIR="data/LungHist700/LungHist700_10x"
 INPUT_BASENAME=$(basename "$INPUT_DIR")
 GPU_ID=1
-AGGREGATION="tile_with_overlap"  # Options: whole_roi, tile_no_overlap, tile_with_overlap
+AGGREGATION="whole_roi"  # Options: whole_roi, tile_no_overlap, tile_with_overlap
 TILE_SIZE=224
 BATCH_SIZE=32
 NUM_WORKERS=4
