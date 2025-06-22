@@ -52,6 +52,31 @@
                 "--report-path",
                 "reports/tcga-ut/test_darya.csv",
             ]
-        }
+        },
+        {
+            "name": "Python: Compute Embeddings LungHist700",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/histobench/evaluation/compute_embeddings_lunghist700.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--model",
+                "moco_superpixel_cluster_bioptimus",
+                "--model-weights-path",
+                "/mnt/nas7/data/Personal/Darya/Checkpoints/superpixel_cluster_clean/cluster_bioptimus_bs256_lr0.003_epochs100_clusters50_moco_superpixel_cluster_bioptimus/best_model.pth",
+                "--input-dir",
+                "data/LungHist700/LungHist700_10x",
+                "--gpu-id",
+                "1",
+                "--batch-size",
+                "32",
+                "--num-workers",
+                "0",
+                "--aggregation",
+                "tile_with_overlap",
+                "--embeddings-path",
+                "data/embeddings/tcga_ut/test_darya.h5"
+            ]
+        },
     ]
 }

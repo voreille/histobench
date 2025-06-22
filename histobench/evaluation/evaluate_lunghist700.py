@@ -22,41 +22,70 @@ logger = logging.getLogger(__name__)
 project_dir = Path(__file__).parents[2].resolve()
 
 
-def get_split_idx(df_split, image_paths, split_type, no_val=False):
-    split_column = f"split_{split_type}"
-    patient_splits = df_split.groupby("patient")[split_column].nunique()
-    multi_split_patients = patient_splits[patient_splits > 1]
-    if not multi_split_patients.empty:
-        raise ValueError(
-            f"Some patients are assigned to multiple splits: {multi_split_patients.index.tolist()}. "
-            "Please ensure each patient is assigned to only one split."
-        )
+def custom_balanced_group_kfold(X, y, groups, n_splits=5, random_state=42):
+    """Ensure all classes appear in each fold"""
+    rng = np.random.RandomState(random_state)
+    unique_classes = np.unique(y)
+    unique_groups = np.unique(groups)
 
-    assert "patient" in df_split.columns and "path" in df_split.columns, (
-        "CSV must have 'patient' and 'path' columns"
-    )
-    patient_to_split = df_split.groupby("patient")[split_column].first().to_dict()
-    splits = [
-        patient_to_split.get("-".join(path.parent.name.split("-")[:3]), None)
-        for path in image_paths
-    ]
-    train_idx = [i for i, s in enumerate(splits) if s == "train"]
-    val_idx = [i for i, s in enumerate(splits) if s == "valid"]
-    test_idx = [i for i, s in enumerate(splits) if s == "test"]
-    if no_val:
-        train_idx.extend(val_idx)
-        return train_idx, test_idx
-    return train_idx, val_idx, test_idx
+    # Create a mapping from string labels to integers if needed
+    if not np.issubdtype(unique_classes.dtype, np.number):
+        class_mapping = {label: i for i, label in enumerate(unique_classes)}
+        y_numeric = np.array([class_mapping[label] for label in y])
+    else:
+        y_numeric = y
+
+    # Group patients by class
+    class_to_groups = {c: [] for c in unique_classes}
+    for group in unique_groups:
+        group_mask = groups == group
+        group_classes = y[group_mask]
+
+        # Count occurrences of each class in this group
+        if not np.issubdtype(unique_classes.dtype, np.number):
+            counts = pd.Series(group_classes).value_counts()
+            most_common_class = counts.idxmax()
+        else:
+            most_common_class = np.bincount(y_numeric[group_mask]).argmax()
+            most_common_class = unique_classes[most_common_class]
+
+        class_to_groups[most_common_class].append(group)
+
+    # Create folds ensuring each class is represented
+    folds = [[] for _ in range(n_splits)]
+    for cls, cls_groups in class_to_groups.items():
+        cls_groups = list(cls_groups)
+        rng.shuffle(cls_groups)
+        for i, group in enumerate(cls_groups):
+            fold_idx = i % n_splits
+            folds[fold_idx].append(group)
+
+    # Generate train/test indices for each fold
+    for i in range(n_splits):
+        test_groups = folds[i]
+        test_mask = np.isin(groups, test_groups)
+        test_indices = np.where(test_mask)[0]
+        train_indices = np.where(~test_mask)[0]
+        yield train_indices, test_indices
 
 
 def compute_metrics(y_true, y_pred, y_score=None):
+    from sklearn.utils.multiclass import type_of_target
+
+    # Determine if binary or multiclass
+    target_type = type_of_target(y_true)
+    if target_type == "binary":
+        average = "binary"
+    else:
+        average = "macro"
+
     metrics = {
         "accuracy": accuracy_score(y_true, y_pred),
-        "precision": precision_score(y_true, y_pred, zero_division=0),
-        "recall": recall_score(y_true, y_pred, zero_division=0),
-        "f1": f1_score(y_true, y_pred, zero_division=0),
+        "precision": precision_score(y_true, y_pred, zero_division=0, average=average),
+        "recall": recall_score(y_true, y_pred, zero_division=0, average=average),
+        "f1": f1_score(y_true, y_pred, zero_division=0, average=average),
     }
-    if y_score is not None:
+    if y_score is not None and target_type == "binary":
         try:
             metrics["roc_auc"] = roc_auc_score(y_true, y_score)
         except Exception:
@@ -114,10 +143,10 @@ def evaluate_split(train_idx, test_idx, embeddings, y, knn_n_neighbors=20):
 
 @click.command()
 @click.option(
-    "--csv-split-path",
-    default="data/tcga-ut/train_val_test_split.csv",
+    "--csv-metadata",
+    default="data/LungHist700/metadata.csv",
     type=click.Path(exists=True),
-    help="Path to the CSV file containing the train/val/test split.",
+    help="Path to the CSV metadata file with patient information.",
 )
 @click.option(
     "--embeddings-path",
@@ -127,7 +156,7 @@ def evaluate_split(train_idx, test_idx, embeddings, y, knn_n_neighbors=20):
     help="Path to the .h5 embeddings file.",
 )
 @click.option(
-    "--knn-n-neighbors", default=5, show_default=True, help="Number of neighbors for KNN."
+    "--knn-n-neighbors", default=20, show_default=True, help="Number of neighbors for KNN."
 )
 @click.option(
     "--report-path",
@@ -135,45 +164,44 @@ def evaluate_split(train_idx, test_idx, embeddings, y, knn_n_neighbors=20):
     show_default=True,
     help="Path to save the metrics report (CSV).",
 )
+@click.option("--n-splits", default=5, show_default=True, help="Number of CV folds.")
 def main(
-    csv_split_path,
+    csv_metadata,
     embeddings_path,
     knn_n_neighbors,
     report_path,
+    n_splits,
 ):
-    csv_split_path = project_dir / csv_split_path
-    df_split = pd.read_csv(csv_split_path)
+    csv_metadata_path = project_dir / csv_metadata
+    metadata_df = pd.read_csv(csv_metadata_path).set_index("filename")
     embeddings_path = project_dir / embeddings_path if embeddings_path else None
     report_path = project_dir / report_path
 
     embeddings, image_paths = load_embeddings(embeddings_path)
+    filenames = [Path(path).stem for path in image_paths]
 
     norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
     embeddings = embeddings / (norms + 1e-8)  # add epsilon to avoid division by zero
 
-    image_paths = [Path(path) for path in image_paths]
-    labels = [path.parents[2].name for path in image_paths]
+    # Get patient_id and label for each embedding
+    patient_ids = metadata_df.loc[filenames, "patient_id"].values
+    labels = metadata_df.loc[filenames, "superclass"].values
 
     # Convert labels to binary (0/1) for two-class problem
     unique_labels = sorted(set(labels))
     label_map = {label: idx for idx, label in enumerate(unique_labels)}
-    y = [label_map[label] for label in labels]
+    y = np.array([label_map[label] for label in labels])
 
     all_report_rows = []
-
-    for split_type in ["internal", "external"]:
-        logger.info(f"Evaluating split: {split_type}")
-        try:
-            train_idx, test_idx = get_split_idx(df_split, image_paths, split_type, no_val=True)
-        except Exception as e:
-            logger.warning(f"Skipping split '{split_type}': {e}")
-            continue
-
+    cv = custom_balanced_group_kfold(
+        embeddings, y, patient_ids, n_splits=n_splits, random_state=42
+    )
+    for fold_idx, (train_idx, test_idx) in enumerate(cv):
         report_rows = evaluate_split(
             train_idx, test_idx, embeddings, y, knn_n_neighbors=knn_n_neighbors
         )
         for row in report_rows:
-            row["split_type"] = split_type
+            row["fold"] = fold_idx
         all_report_rows.extend(report_rows)
 
     # Save combined report as CSV
