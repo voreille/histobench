@@ -18,7 +18,7 @@ EMBEDDINGS_PATH="data/embeddings/lunghist700/${MODEL}_${INPUT_BASENAME}_${AGGREG
 CSV_METADATA="data/LungHist700/metadata.csv"
 KNN_N_NEIGHBORS=20
 REPORT_PATH="reports/lunghist700/${MODEL}_${INPUT_BASENAME}_${AGGREGATION}_cv_report.csv"
-N_SPLITS=4
+N_SPLITS=4 # Number of splits for cross-validation
 
 # Check if embeddings file exists
 if [ -f "$EMBEDDINGS_PATH" ]; then
