@@ -12,7 +12,10 @@ from sklearn.metrics import (
     recall_score,
     roc_auc_score,
 )
+from sklearn.model_selection import StratifiedGroupKFold
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 
 from histobench.evaluation.compute_embeddings_tcga_ut import load_embeddings
 
@@ -110,7 +113,13 @@ def evaluate_split(train_idx, test_idx, embeddings, y, knn_n_neighbors=20):
     report_rows = []
 
     # KNN Probing (K=20, Euclidean)
-    knn = KNeighborsClassifier(n_neighbors=knn_n_neighbors, metric="euclidean")
+    knn = Pipeline(
+        [
+            ("scaler", StandardScaler()),
+            ("classifier", KNeighborsClassifier(n_neighbors=knn_n_neighbors)),
+        ]
+    )
+
     knn.fit(X_train, y_train)
     y_pred_knn = knn.predict(X_test)
     y_score_knn = knn.predict_proba(X_test)[:, 1] if n_classes == 2 else None
@@ -180,8 +189,8 @@ def main(
     embeddings, image_paths = load_embeddings(embeddings_path)
     filenames = [Path(path).stem for path in image_paths]
 
-    norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
-    embeddings = embeddings / (norms + 1e-8)  # add epsilon to avoid division by zero
+    # norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
+    # embeddings = embeddings / (norms + 1e-8)  # add epsilon to avoid division by zero
 
     # Get patient_id and label for each embedding
     patient_ids = metadata_df.loc[filenames, "patient_id"].values
@@ -193,9 +202,23 @@ def main(
     y = np.array([label_map[label] for label in labels])
 
     all_report_rows = []
-    cv = custom_balanced_group_kfold(
-        embeddings, y, patient_ids, n_splits=n_splits, random_state=42
+    # cv = custom_balanced_group_kfold(
+    #     embeddings, y, patient_ids, n_splits=n_splits, random_state=42
+    # )
+
+    cv_splitter = StratifiedGroupKFold(
+        n_splits=5,
+        shuffle=True,
+        random_state=42,
     )
+    cv = list(
+        cv_splitter.split(
+            embeddings,
+            labels,
+            groups=patient_ids,
+        )
+    )
+
     for fold_idx, (train_idx, test_idx) in enumerate(cv):
         report_rows = evaluate_split(
             train_idx, test_idx, embeddings, y, knn_n_neighbors=knn_n_neighbors

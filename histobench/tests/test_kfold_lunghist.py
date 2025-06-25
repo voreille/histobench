@@ -9,7 +9,7 @@ from histobench.evaluation.compute_embeddings_tcga_ut import load_embeddings
 from histobench.evaluation.evaluate_lunghist700 import custom_balanced_group_kfold
 
 # ---- User variables ----
-EMBEDDINGS_PATH = "data/embeddings/lunghist700/UNI2_LungHist700_10x_whole_roi.h5"
+EMBEDDINGS_PATH = "/home/valentin/workspaces/histobench/data/embeddings/lunghist700/_moco_v2_LungHist700_10x_tile_with_overlap.h5"
 CSV_METADATA = "data/LungHist700/metadata.csv"
 N_SPLITS = 4
 LABEL_COLUMN = "superclass"  # or "label" depending on your metadata

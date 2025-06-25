@@ -149,6 +149,7 @@ def main(
     if model in FOUNDATION_MODEL_NAMES:
         encoder, preprocess, _, _ = load_foundation_model(model, device)
     elif model in model_cls_map and model_weights_path is not None:
+        logger.info(f"Loading model weights from {model_weights_path}")
         encoder, preprocess = load_pretrained_encoder(model, model_weights_path, device=device)
     else:
         raise ValueError(

@@ -61,9 +61,9 @@
             "console": "integratedTerminal",
             "args": [
                 "--model",
-                "moco_superpixel_cluster_bioptimus",
+                "moco_v2",
                 "--model-weights-path",
-                "/mnt/nas7/data/Personal/Darya/Checkpoints/superpixel_cluster_clean/cluster_bioptimus_bs256_lr0.003_epochs100_clusters50_moco_superpixel_cluster_bioptimus/best_model.pth",
+                "/mnt/nas7/data/Personal/Darya/saved_models/superpixel_org/superpixel_org_99.pth",
                 "--input-dir",
                 "data/LungHist700/LungHist700_10x",
                 "--gpu-id",
@@ -75,7 +75,24 @@
                 "--aggregation",
                 "tile_with_overlap",
                 "--embeddings-path",
-                "data/embeddings/tcga_ut/test_darya.h5"
+                "data/embeddings/lunghist700/test_darya.h5"
+            ]
+        },
+        {
+            "name": "Python: Evaluate LungHist700",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/histobench/evaluation/evaluate_lunghist700.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--csv-metadata",
+                "data/LungHist700/metadata.csv",
+                "--embeddings-path",
+                "data/embeddings/lunghist700/test_darya.h5",
+                "--knn-n-neighbors",
+                "5",
+                "--report-path",
+                "reports/lunghist700/test_darya.csv",
             ]
         },
     ]

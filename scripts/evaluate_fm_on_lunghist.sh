@@ -1,14 +1,17 @@
 #!/bin/bash
 
 # Variables for compute_embeddings_lunghist700.py
-MODEL="H-optimus-0"  # Change to your desired model
+# MODEL="H-optimus-0"  # Change to your desired model
 # MODEL="moco_superpixel_cluster_bioptimus"
-WEIGHTS_PATH=""  # Leave empty if not needed
+MODEL="moco_v2"
+# WEIGHTS_PATH=""  # Leave empty if not needed
+WEIGHTS_PATH="/mnt/nas7/data/Personal/Darya/Checkpoints/superpixel_cluster_clean/no_cluster_bs256_lr0.003_step50_warmup100_epochs100_clusters50_moco_v2/best_model.pth"
 # WEIGHTS_PATH="/mnt/nas7/data/Personal/Darya/Checkpoints/superpixel_cluster_clean/cluster_bioptimus_bs256_lr0.003_epochs100_clusters50_moco_superpixel_cluster_bioptimus/best_model.pth"
+WEIGHTS_PATH="/mnt/nas7/data/Personal/Darya/Checkpoints/superpixel_cluster_clean/cluster_bioptimus_queue_wo_fn_queue5120_alpha0.01_beta0.005_epochs100_moco_superpixel_cluster_bioptimus/best_model_epoch95.pth"
 INPUT_DIR="data/LungHist700/LungHist700_10x"
 INPUT_BASENAME=$(basename "$INPUT_DIR")
 GPU_ID=1
-AGGREGATION="whole_roi"  # Options: whole_roi, tile_no_overlap, tile_with_overlap
+AGGREGATION="tile_with_overlap"  # Options: whole_roi, tile_no_overlap, tile_with_overlap
 TILE_SIZE=224
 BATCH_SIZE=32
 NUM_WORKERS=4
@@ -16,9 +19,9 @@ EMBEDDINGS_PATH="data/embeddings/lunghist700/${MODEL}_${INPUT_BASENAME}_${AGGREG
 
 # Variables for evaluate_lunghist700.py
 CSV_METADATA="data/LungHist700/metadata.csv"
-KNN_N_NEIGHBORS=20
-REPORT_PATH="reports/lunghist700/${MODEL}_${INPUT_BASENAME}_${AGGREGATION}_cv_report.csv"
-N_SPLITS=4 # Number of splits for cross-validation
+KNN_N_NEIGHBORS=5
+REPORT_PATH="reports/lunghist700/${MODEL}_${INPUT_BASENAME}_${AGGREGATION}_KNNn_${KNN_N_NEIGHBORS}_cv_report.csv"
+N_SPLITS=5 # Number of splits for cross-validation
 
 # Check if embeddings file exists
 if [ -f "$EMBEDDINGS_PATH" ]; then
