@@ -6,6 +6,7 @@ import h5py
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
+from torchvision import transforms
 from tqdm import tqdm
 
 from histobench.darya_code.get_model_inference import model_cls_map
@@ -19,6 +20,86 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 project_dir = Path(__file__).parents[2].resolve()
+
+
+def compute_embeddings_on_tcga_ut(
+    model="UNI2",
+    model_weights_path="",
+    magnification_key=5,
+    tcga_ut_dir="data/tcga-ut",
+    gpu_id=0,
+    batch_size=32,
+    num_workers=0,
+    embeddings_path="data/embeddings/tcga_ut/uni2_mag_5.h5",
+):
+    """Simple CLI program to greet someone"""
+    tcga_ut_rootdir = Path(tcga_ut_dir).resolve()
+    image_paths = list(tcga_ut_rootdir.rglob(f"*/{magnification_key}/*/*.jpg"))
+    embeddings_path = project_dir / embeddings_path if embeddings_path else None
+
+    if embeddings_path.suffix != ".h5":
+        logger.warning(
+            f"Embeddings path should have .h5 suffix, changing {embeddings_path} to {embeddings_path.with_suffix('.h5')}"
+        )
+        embeddings_path = embeddings_path.with_suffix(".h5")
+
+    logger.info(f"Found {len(image_paths)} images in {tcga_ut_rootdir}")
+
+    device = get_device(gpu_id)
+    logger.info(f"Using device: {device}")
+
+    logger.info(f"Loading model: {model}")
+
+    if model in FOUNDATION_MODEL_NAMES:
+        encoder, _, _, _ = load_foundation_model(model, get_device(gpu_id))
+        if model in ["UNI2", "resnet50"]:
+            # UNI2 and H-optimus-0 have specific preprocessing
+            preprocess = transforms.Compose(
+                [
+                    transforms.CenterCrop(224),
+                    transforms.ToTensor(),
+                    transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+                ]
+            )
+        elif model == "H-optimus-0":
+            preprocess = transforms.Compose(
+                [
+                    transforms.CenterCrop(224),
+                    transforms.ToTensor(),
+                    transforms.Normalize(
+                        mean=(0.707223, 0.578729, 0.703617),
+                        std=(0.211883, 0.230117, 0.177517),
+                    ),
+                ]
+            )
+
+    elif model in model_cls_map and model_weights_path is not None:
+        encoder, preprocess = load_pretrained_encoder(model, model_weights_path, device=device)
+
+    else:
+        raise ValueError(
+            f"Model {model} is not supported or model_weights_path is required for this model."
+        )
+
+    dataset = ImageDataset(
+        image_paths=image_paths,
+        transform=preprocess,
+    )
+    dataloader = DataLoader(
+        dataset,
+        batch_size=batch_size,
+        num_workers=num_workers,
+        pin_memory=True,
+        shuffle=False,
+        prefetch_factor=4 if num_workers > 0 else None,
+        persistent_workers=num_workers > 0,
+    )
+
+    embeddings, image_paths = compute_embeddings(encoder, dataloader, device=device)
+
+    embeddings_path.parent.mkdir(parents=True, exist_ok=True)
+    save_embeddings(embeddings, image_paths, embeddings_path)
+    logger.info(f"Embeddings saved to {embeddings_path}")
 
 
 def compute_embeddings(model, dataloader, device="cuda"):
@@ -100,54 +181,19 @@ def main(
     num_workers,
     embeddings_path,
 ):
-    """Simple CLI program to greet someone"""
-    tcga_ut_rootdir = Path(tcga_ut_dir).resolve()
-    image_paths = list(tcga_ut_rootdir.rglob(f"*/{magnification_key}/*/*.jpg"))
-    embeddings_path = project_dir / embeddings_path if embeddings_path else None
-
-    if embeddings_path.suffix != ".h5":
-        logger.warning(
-            f"Embeddings path should have .h5 suffix, changing {embeddings_path} to {embeddings_path.with_suffix('.h5')}"
-        )
-        embeddings_path = embeddings_path.with_suffix(".h5")
-
-    logger.info(f"Found {len(image_paths)} images in {tcga_ut_rootdir}")
-
-    device = get_device(gpu_id)
-    logger.info(f"Using device: {device}")
-
-    logger.info(f"Loading model: {model}")
-
-    if model in FOUNDATION_MODEL_NAMES:
-        encoder, preprocess, _, _ = load_foundation_model(model, get_device(gpu_id))
-
-    elif model in model_cls_map and model_weights_path is not None:
-        encoder, preprocess = load_pretrained_encoder(model, model_weights_path, device=device)
-
-    else:
-        raise ValueError(
-            f"Model {model} is not supported or model_weights_path is required for this model."
-        )
-
-    dataset = ImageDataset(
-        image_paths=image_paths,
-        transform=preprocess,
-    )
-    dataloader = DataLoader(
-        dataset,
+    """
+    Compute embeddings for the TCGA-UT dataset using a specified model and save them to an HDF5 file.
+    """
+    compute_embeddings_on_tcga_ut(
+        model=model,
+        model_weights_path=model_weights_path,
+        magnification_key=magnification_key,
+        tcga_ut_dir=tcga_ut_dir,
+        gpu_id=gpu_id,
         batch_size=batch_size,
         num_workers=num_workers,
-        pin_memory=True,
-        shuffle=False,
-        prefetch_factor=4 if num_workers > 0 else None,
-        persistent_workers=num_workers > 0,
+        embeddings_path=embeddings_path,
     )
-
-    embeddings, image_paths = compute_embeddings(encoder, dataloader, device=device)
-
-    embeddings_path.parent.mkdir(parents=True, exist_ok=True)
-    save_embeddings(embeddings, image_paths, embeddings_path)
-    logger.info(f"Embeddings saved to {embeddings_path}")
 
 
 if __name__ == "__main__":

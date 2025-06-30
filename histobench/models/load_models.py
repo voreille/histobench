@@ -20,14 +20,27 @@ def load_pretrained_encoder(model_name, weights_path, device):
 
     # Filter and rename keys that belong to encoder_q
     encoder_q_state_dict = {
-        k.replace("encoder_q.", ""): v
-        for k, v in state_dict.items()
-        if k.startswith("encoder_q.")
+        k.replace("encoder_q.", ""): v for k, v in state_dict.items() if k.startswith("encoder_q.")
     }
 
     # Load into encoder_q only
     encoder_q = moco_model.encoder_q
+
+    original_weights = {name: param.clone() for name, param in encoder_q.named_parameters()}
+
     encoder_q.load_state_dict(encoder_q_state_dict, strict=True)
+
+    # Check if weights actually changed
+    weights_changed = False
+    for name, param in encoder_q.named_parameters():
+        if not torch.equal(original_weights[name], param):
+            weights_changed = True
+            break
+
+    if weights_changed:
+        logger.info("✓ Model weights successfully updated from checkpoint")
+    else:
+        logger.warning("⚠ Model weights appear unchanged after loading checkpoint")
 
     # Remove final classification layer
     encoder_q.fc = torch.nn.Identity()
@@ -37,7 +50,8 @@ def load_pretrained_encoder(model_name, weights_path, device):
 
     preprocess = transforms.Compose(
         [
-            transforms.Resize((224, 224)),
+            # transforms.Resize((224, 224)),
+            transforms.CenterCrop((224, 224)),
             transforms.ToTensor(),
             transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
         ]

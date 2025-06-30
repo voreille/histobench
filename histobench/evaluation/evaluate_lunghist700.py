@@ -115,7 +115,6 @@ def evaluate_split(train_idx, test_idx, embeddings, y, knn_n_neighbors=20):
     # KNN Probing (K=20, Euclidean)
     knn = Pipeline(
         [
-            ("scaler", StandardScaler()),
             ("classifier", KNeighborsClassifier(n_neighbors=knn_n_neighbors)),
         ]
     )
@@ -136,7 +135,7 @@ def evaluate_split(train_idx, test_idx, embeddings, y, knn_n_neighbors=20):
         C=C,
         solver="lbfgs",
         max_iter=1000,
-        multi_class="auto",
+        # class_weight="balanced",
     )
     lr.fit(X_train, y_train)
     y_pred_lr = lr.predict(X_test)
@@ -148,6 +147,69 @@ def evaluate_split(train_idx, test_idx, embeddings, y, knn_n_neighbors=20):
     report_rows.append(metrics_lr)
 
     return report_rows
+
+
+def evaluate_lunghist700_embeddings(
+    csv_metadata,
+    embeddings_path,
+    knn_n_neighbors,
+    report_path,
+    n_splits,
+    label_column="superclass",
+):
+    csv_metadata_path = project_dir / csv_metadata
+    metadata_df = pd.read_csv(csv_metadata_path).set_index("filename")
+    embeddings_path = project_dir / embeddings_path if embeddings_path else None
+    report_path = project_dir / report_path
+
+    embeddings, image_paths = load_embeddings(embeddings_path)
+    filenames = [Path(path).stem for path in image_paths]
+
+    norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
+    embeddings = embeddings / (norms + 1e-8)  # add epsilon to avoid division by zero
+
+    # Get patient_id and label for each embedding
+    patient_ids = metadata_df.loc[filenames, "patient_id"].values
+    labels = metadata_df.loc[filenames, label_column].values
+
+    # Convert labels to binary (0/1) for two-class problem
+    unique_labels = sorted(set(labels))
+    label_map = {label: idx for idx, label in enumerate(unique_labels)}
+    y = np.array([label_map[label] for label in labels])
+
+    all_report_rows = []
+
+    if label_column == "superclass":
+        cv_splitter = StratifiedGroupKFold(
+            n_splits=n_splits,
+            shuffle=True,
+            random_state=42,
+        )
+        cv = list(
+            cv_splitter.split(
+                embeddings,
+                labels,
+                groups=patient_ids,
+            )
+        )
+    else:
+        cv = custom_balanced_group_kfold(
+            embeddings, y, patient_ids, n_splits=n_splits, random_state=42
+        )
+
+    for fold_idx, (train_idx, test_idx) in enumerate(cv):
+        report_rows = evaluate_split(
+            train_idx, test_idx, embeddings, y, knn_n_neighbors=knn_n_neighbors
+        )
+        for row in report_rows:
+            row["fold"] = fold_idx
+        all_report_rows.extend(report_rows)
+
+    # Save combined report as CSV
+    df_report = pd.DataFrame(all_report_rows)
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    df_report.to_csv(report_path, index=False)
+    logger.info(f"Metrics report saved to {report_path}")
 
 
 @click.command()
@@ -181,57 +243,19 @@ def main(
     report_path,
     n_splits,
 ):
-    csv_metadata_path = project_dir / csv_metadata
-    metadata_df = pd.read_csv(csv_metadata_path).set_index("filename")
-    embeddings_path = project_dir / embeddings_path if embeddings_path else None
-    report_path = project_dir / report_path
+    """
+    Evaluate embeddings for the LungHist700 dataset using KNN and Logistic Regression.
+    Computes metrics and saves them to a CSV file.
+    """
+    logger.info("Starting evaluation of LungHist700 embeddings...")
 
-    embeddings, image_paths = load_embeddings(embeddings_path)
-    filenames = [Path(path).stem for path in image_paths]
-
-    # norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
-    # embeddings = embeddings / (norms + 1e-8)  # add epsilon to avoid division by zero
-
-    # Get patient_id and label for each embedding
-    patient_ids = metadata_df.loc[filenames, "patient_id"].values
-    labels = metadata_df.loc[filenames, "superclass"].values
-
-    # Convert labels to binary (0/1) for two-class problem
-    unique_labels = sorted(set(labels))
-    label_map = {label: idx for idx, label in enumerate(unique_labels)}
-    y = np.array([label_map[label] for label in labels])
-
-    all_report_rows = []
-    # cv = custom_balanced_group_kfold(
-    #     embeddings, y, patient_ids, n_splits=n_splits, random_state=42
-    # )
-
-    cv_splitter = StratifiedGroupKFold(
-        n_splits=5,
-        shuffle=True,
-        random_state=42,
+    evaluate_lunghist700_embeddings(
+        csv_metadata=csv_metadata,
+        embeddings_path=embeddings_path,
+        knn_n_neighbors=knn_n_neighbors,
+        report_path=report_path,
+        n_splits=n_splits,
     )
-    cv = list(
-        cv_splitter.split(
-            embeddings,
-            labels,
-            groups=patient_ids,
-        )
-    )
-
-    for fold_idx, (train_idx, test_idx) in enumerate(cv):
-        report_rows = evaluate_split(
-            train_idx, test_idx, embeddings, y, knn_n_neighbors=knn_n_neighbors
-        )
-        for row in report_rows:
-            row["fold"] = fold_idx
-        all_report_rows.extend(report_rows)
-
-    # Save combined report as CSV
-    df_report = pd.DataFrame(all_report_rows)
-    report_path.parent.mkdir(parents=True, exist_ok=True)
-    df_report.to_csv(report_path, index=False)
-    logger.info(f"Metrics report saved to {report_path}")
 
 
 if __name__ == "__main__":

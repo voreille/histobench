@@ -95,5 +95,16 @@
                 "reports/lunghist700/test_darya.csv",
             ]
         },
+        {
+            "name": "Python: Evaluate TCGA UT pipeline",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/histobench/evaluation/tcga_ut_pipeline.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--config-path",
+                "${workspaceFolder}/configs/tcga_ut/config.yaml",
+            ]
+        },
     ]
 }

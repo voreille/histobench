@@ -24,6 +24,25 @@ class ImageDataset(Dataset):
         return image, image_path
 
 
+class LabelledImageDataset(Dataset):
+    def __init__(self, image_paths, labels, transform=None):
+        self.image_paths = [str(path.resolve()) for path in image_paths]
+        self.labels = labels
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.image_paths)
+
+    def __getitem__(self, idx):
+        image_path = self.image_paths[idx]
+        image = Image.open(image_path).convert("RGB")  # Load as PIL image
+
+        if self.transform:
+            image = self.transform(image)  # Apply augmentation
+
+        return image, torch.tensor(self.labels[idx], dtype=torch.long)
+
+
 class TileOnTheFlyDataset(torch.utils.data.Dataset):
     def __init__(self, roi_paths, tile_transform=None, roi_transform=None, tile_size=224):
         self.roi_paths = [str(path.resolve()) for path in roi_paths]

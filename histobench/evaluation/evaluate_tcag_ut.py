@@ -22,6 +22,54 @@ logger = logging.getLogger(__name__)
 project_dir = Path(__file__).parents[2].resolve()
 
 
+def evaluate_tcga_ut_embeddings(
+    csv_split_path="data/tcga-ut/train_val_test_split.csv",
+    embeddings_path="",
+    knn_n_neighbors=5,
+    report_path="reports/tcga_ut/tcga_ut_cv_report.csv",
+):
+    csv_split_path = project_dir / csv_split_path
+    df_split = pd.read_csv(csv_split_path)
+    embeddings_path = project_dir / embeddings_path if embeddings_path else None
+    report_path = project_dir / report_path
+
+    embeddings, image_paths = load_embeddings(embeddings_path)
+
+    norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
+    embeddings = embeddings / (norms + 1e-8)  # add epsilon to avoid division by zero
+
+    image_paths = [Path(path) for path in image_paths]
+    labels = [path.parents[2].name for path in image_paths]
+
+    # Convert labels to binary (0/1) for two-class problem
+    unique_labels = sorted(set(labels))
+    label_map = {label: idx for idx, label in enumerate(unique_labels)}
+    y = [label_map[label] for label in labels]
+
+    all_report_rows = []
+
+    for split_type in ["internal", "external"]:
+        logger.info(f"Evaluating split: {split_type}")
+        try:
+            train_idx, test_idx = get_split_idx(df_split, image_paths, split_type, no_val=True)
+        except Exception as e:
+            logger.warning(f"Skipping split '{split_type}': {e}")
+            continue
+
+        report_rows = evaluate_split(
+            train_idx, test_idx, embeddings, y, knn_n_neighbors=knn_n_neighbors
+        )
+        for row in report_rows:
+            row["split_type"] = split_type
+        all_report_rows.extend(report_rows)
+
+    # Save combined report as CSV
+    df_report = pd.DataFrame(all_report_rows)
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    df_report.to_csv(report_path, index=False)
+    logger.info(f"Metrics report saved to {report_path}")
+
+
 def get_split_idx(df_split, image_paths, split_type, no_val=False):
     split_column = f"split_{split_type}"
     patient_splits = df_split.groupby("patient")[split_column].nunique()
@@ -90,7 +138,6 @@ def evaluate_split(train_idx, test_idx, embeddings, y, knn_n_neighbors=20):
     report_rows.append(metrics_knn)
 
     # Linear Probing (Logistic Regression)
-    # λ = 100 * M / C, so C = 1 / λ
     l2_lambda = 100 / embedding_dim / n_classes
     C = 1.0 / l2_lambda
     lr = LogisticRegression(
@@ -141,46 +188,16 @@ def main(
     knn_n_neighbors,
     report_path,
 ):
-    csv_split_path = project_dir / csv_split_path
-    df_split = pd.read_csv(csv_split_path)
-    embeddings_path = project_dir / embeddings_path if embeddings_path else None
-    report_path = project_dir / report_path
-
-    embeddings, image_paths = load_embeddings(embeddings_path)
-
-    norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
-    embeddings = embeddings / (norms + 1e-8)  # add epsilon to avoid division by zero
-
-    image_paths = [Path(path) for path in image_paths]
-    labels = [path.parents[2].name for path in image_paths]
-
-    # Convert labels to binary (0/1) for two-class problem
-    unique_labels = sorted(set(labels))
-    label_map = {label: idx for idx, label in enumerate(unique_labels)}
-    y = [label_map[label] for label in labels]
-
-    all_report_rows = []
-
-    for split_type in ["internal", "external"]:
-        logger.info(f"Evaluating split: {split_type}")
-        try:
-            train_idx, test_idx = get_split_idx(df_split, image_paths, split_type, no_val=True)
-        except Exception as e:
-            logger.warning(f"Skipping split '{split_type}': {e}")
-            continue
-
-        report_rows = evaluate_split(
-            train_idx, test_idx, embeddings, y, knn_n_neighbors=knn_n_neighbors
-        )
-        for row in report_rows:
-            row["split_type"] = split_type
-        all_report_rows.extend(report_rows)
-
-    # Save combined report as CSV
-    df_report = pd.DataFrame(all_report_rows)
-    report_path.parent.mkdir(parents=True, exist_ok=True)
-    df_report.to_csv(report_path, index=False)
-    logger.info(f"Metrics report saved to {report_path}")
+    """
+    Evaluate TCGA-UT embeddings using KNN and Logistic Regression.
+    Computes metrics like accuracy, precision, recall, F1 score, and ROC AUC.
+    """
+    evaluate_tcga_ut_embeddings(
+        csv_split_path=csv_split_path,
+        embeddings_path=embeddings_path,
+        knn_n_neighbors=knn_n_neighbors,
+        report_path=report_path,
+    )
 
 
 if __name__ == "__main__":

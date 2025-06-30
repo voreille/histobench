@@ -26,7 +26,7 @@ def load_model(model_name, device, apply_torch_scripting=True):
     if model_name not in FOUNDATION_MODEL_NAMES:
         raise ValueError(f"Model {model_name} is not supported. Supported models: {FOUNDATION_MODEL_NAMES}")
     if model_name == "H-optimus-0":
-        login(token=os.getenv("HUGGING_FACE_TOKEN"))
+        login(token=os.getenv("HF_TOKEN"))
         model = timm.create_model(
             "hf-hub:bioptimus/H-optimus-0",
             pretrained=True,

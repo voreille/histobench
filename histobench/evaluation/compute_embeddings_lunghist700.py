@@ -80,45 +80,7 @@ def precrop_to_multiple_of_tile(image: Image.Image, tile_size: int) -> Image.Ima
     return image.crop((left, top, right, bottom))
 
 
-@click.command()
-@click.option("--model", default="UNI2", help="Name of the model to use for embeddings.")
-@click.option(
-    "--model-weights-path",
-    default=None,
-    help="Either a model name or a path to the model weights.",
-)
-@click.option(
-    "--input-dir",
-    default="data/LungHist700/LungHist700_10x",
-    type=click.Path(exists=True),
-    help="Directory containing ROI images.",
-)
-@click.option("--gpu-id", default=0, show_default=True, help="GPU ID to use for computation.")
-@click.option(
-    "--aggregation",
-    type=click.Choice(["whole_roi", "tile_no_overlap", "tile_with_overlap"]),
-    default="whole_roi",
-    show_default=True,
-    help="Aggregation method: 'whole_roi', 'tile_no_overlap', or 'tile_with_overlap'.",
-)
-@click.option(
-    "--tile-size",
-    default=224,
-    show_default=True,
-    help="Tile size for tiling strategies.",
-)
-@click.option("--batch-size", default=32, show_default=True, help="Batch size for the dataloader.")
-@click.option(
-    "--num-workers", default=0, show_default=True, help="Number of workers for the dataloader."
-)
-@click.option(
-    "--embeddings-path",
-    default=None,
-    show_default=True,
-    required=True,
-    help="Path to save the embeddings (.h5).",
-)
-def main(
+def compute_embeddings_on_lunghist700(
     model,
     model_weights_path,
     input_dir,
@@ -153,7 +115,10 @@ def main(
         encoder, preprocess = load_pretrained_encoder(model, model_weights_path, device=device)
     else:
         raise ValueError(
-            f"Model {model} is not supported or model_weights_path is required for this model."
+            f"Model {model} is not supported or model_weights_path is required for this model. \n"
+            f"model_weights_path: {model_weights_path}."
+            f"Foundation models: {FOUNDATION_MODEL_NAMES} \n"
+            f"Custom models: {model_cls_map.keys()} \n"
         )
 
     if aggregation == "whole_roi":
@@ -225,6 +190,71 @@ def main(
     embeddings_path.parent.mkdir(parents=True, exist_ok=True)
     save_embeddings(embeddings, image_paths, embeddings_path)
     logger.info(f"Embeddings saved to {embeddings_path}")
+
+
+@click.command()
+@click.option("--model", default="UNI2", help="Name of the model to use for embeddings.")
+@click.option(
+    "--model-weights-path",
+    default=None,
+    help="Either a model name or a path to the model weights.",
+)
+@click.option(
+    "--input-dir",
+    default="data/LungHist700/LungHist700_10x",
+    type=click.Path(exists=True),
+    help="Directory containing ROI images.",
+)
+@click.option("--gpu-id", default=0, show_default=True, help="GPU ID to use for computation.")
+@click.option(
+    "--aggregation",
+    type=click.Choice(["whole_roi", "tile_no_overlap", "tile_with_overlap"]),
+    default="whole_roi",
+    show_default=True,
+    help="Aggregation method: 'whole_roi', 'tile_no_overlap', or 'tile_with_overlap'.",
+)
+@click.option(
+    "--tile-size",
+    default=224,
+    show_default=True,
+    help="Tile size for tiling strategies.",
+)
+@click.option("--batch-size", default=32, show_default=True, help="Batch size for the dataloader.")
+@click.option(
+    "--num-workers", default=0, show_default=True, help="Number of workers for the dataloader."
+)
+@click.option(
+    "--embeddings-path",
+    default=None,
+    show_default=True,
+    required=True,
+    help="Path to save the embeddings (.h5).",
+)
+def main(
+    model,
+    model_weights_path,
+    input_dir,
+    gpu_id,
+    aggregation,
+    tile_size,
+    batch_size,
+    num_workers,
+    embeddings_path,
+):
+    """
+    Compute embeddings for the LungHist700 dataset using a specified model and save them to an HDF5 file.
+    """
+    compute_embeddings_on_lunghist700(
+        model=model,
+        model_weights_path=model_weights_path,
+        input_dir=input_dir,
+        gpu_id=gpu_id,
+        aggregation=aggregation,
+        tile_size=tile_size,
+        batch_size=batch_size,
+        num_workers=num_workers,
+        embeddings_path=embeddings_path,
+    )
 
 
 if __name__ == "__main__":

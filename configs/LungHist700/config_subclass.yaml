@@ -1,0 +1,104 @@
+runtime:
+  force: false # Set to true to recompute embeddings even if they exist
+  gpu_id: 1 # GPU ID to use for computation
+  num_workers: 4 # Number of workers for data loading
+  batch_size: 32 # Batch size for embedding computation
+  report_dir: "reports/lunghist700_harder/" # Path to save evaluation report
+
+eval:
+  csv_metadata: "data/LungHist700/metadata.csv"
+  knn_n_neighbors: [5, 20] # List of KNN neighbors to evaluate
+  n_splits: 4 # Number of cross-validation splits
+  label_column: "class_name" # Column name for labels in metadata
+
+models:
+  - name: "resnet50"
+    label: "resnet50"
+    input_dir: "data/LungHist700/LungHist700_10x"
+    aggregation: "tile_with_overlap"
+    tile_size: 224
+
+  - name: "resnet50"
+    label: "resnet50"
+    input_dir: "data/LungHist700/LungHist700_10x"
+    aggregation: "whole_roi"
+    tile_size: 224
+
+  # Custom models with weights
+  - name: "moco_superpixel_cluster_bioptimus"
+    label: "superpixel_cluster"
+    weights_path: "/mnt/nas7/data/Personal/Darya/Checkpoints/superpixel_cluster_clean/cluster_bioptimus_queue_wo_fn_queue20480_alpha0.01_beta0.005_epochs60_moco_superpixel_cluster_bioptimus/best_model_epoch60.pth"
+    input_dir: "data/LungHist700/LungHist700_10x"
+    aggregation: "whole_roi"
+    tile_size: 224
+
+  - name: "moco_superpixel_cluster_bioptimus"
+    label: "superpixel_cluster"
+    weights_path: "/mnt/nas7/data/Personal/Darya/Checkpoints/superpixel_cluster_clean/cluster_bioptimus_queue_wo_fn_queue20480_alpha0.01_beta0.005_epochs60_moco_superpixel_cluster_bioptimus/best_model_epoch60.pth"
+    input_dir: "data/LungHist700/LungHist700_10x"
+    aggregation: "tile_with_overlap"
+    tile_size: 224
+
+  - name: "moco_v2"
+    label: "moco_v2"
+    weights_path: "/mnt/nas7/data/Personal/Darya/Checkpoints/superpixel_cluster_clean/no_cluster_queue_wo_fn_queue20480_alpha0.01_beta0.005_epochs60_moco_v2/best_model_epoch60.pth" # Update with actual path
+    input_dir: "data/LungHist700/LungHist700_10x"
+    aggregation: "tile_with_overlap"
+    tile_size: 224
+
+  - name: "moco_v2"
+    label: "moco_v2"
+    weights_path: "/mnt/nas7/data/Personal/Darya/Checkpoints/superpixel_cluster_clean/no_cluster_queue_wo_fn_queue20480_alpha0.01_beta0.005_epochs60_moco_v2/best_model_epoch60.pth" # Update with actual path
+    input_dir: "data/LungHist700/LungHist700_10x"
+    aggregation: "whole_roi"
+    tile_size: 224
+
+  # Foundation models
+  - name: "H-optimus-0"
+    label: "H-optimus-0"
+    input_dir: "data/LungHist700/LungHist700_10x"
+    aggregation: "tile_with_overlap"
+    tile_size: 224
+
+  # - name: "H-optimus-0"
+  #   label: "H-optimus-0"
+  #   input_dir: "data/LungHist700/LungHist700_10x"
+  #   aggregation: "whole_roi"
+  #   tile_size: 224
+
+  - name: "UNI2"
+    label: "UNI2"
+    input_dir: "data/LungHist700/LungHist700_10x"
+    aggregation: "tile_with_overlap"
+    tile_size: 224
+
+  - name: "UNI2"
+    label: "UNI2"
+    input_dir: "data/LungHist700/LungHist700_10x"
+    aggregation: "whole_roi"
+    tile_size: 224
+
+  # Foundation models
+  - name: "H-optimus-0"
+    label: "H-optimus-0-20x"
+    input_dir: "data/LungHist700/LungHist700_20x"
+    aggregation: "tile_with_overlap"
+    tile_size: 224
+
+  # - name: "H-optimus-0"
+  #   label: "H-optimus-0-20x"
+  #   input_dir: "data/LungHist700/LungHist700_20x"
+  #   aggregation: "whole_roi"
+  #   tile_size: 224
+
+  - name: "UNI2"
+    label: "UNI2-20x"
+    input_dir: "data/LungHist700/LungHist700_20x"
+    aggregation: "tile_with_overlap"
+    tile_size: 224
+
+  - name: "UNI2"
+    label: "UNI2-20x"
+    input_dir: "data/LungHist700/LungHist700_20x"
+    aggregation: "whole_roi"
+    tile_size: 224
