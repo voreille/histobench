@@ -2,10 +2,12 @@ import logging
 from pathlib import Path
 
 import click
+import pandas as pd
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 import torch
 from torch.utils.data import DataLoader
+from torchmetrics.classification import MulticlassAccuracy
 
 from histobench.data.torch_datasets import LabelledImageDataset
 from histobench.models.foundation_models import FOUNDATION_MODEL_NAMES
@@ -73,6 +75,20 @@ class FineTuneModel(pl.LightningModule):
         self.lr = lr
         self.weight_decay = weight_decay
 
+        self.train_accuracy = MulticlassAccuracy(
+            num_classes=output_dim,
+            average="macro",
+            multidim_average="global",
+            top_k=1,
+        )
+        self.val_accuracy = MulticlassAccuracy(
+            num_classes=output_dim,
+            average="macro",
+            multidim_average="global",
+            top_k=1,
+        )
+        self.save_hyperparameters()
+
     def forward(self, x):
         features = self.encoder(x)
         return self.classifier(features)
@@ -81,18 +97,23 @@ class FineTuneModel(pl.LightningModule):
         images, labels = batch
         logits = self(images)
         loss = torch.nn.functional.cross_entropy(logits, labels)
-        self.log("train_loss", loss)
+        self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True)
+        accuracy = self.train_accuracy(logits, labels)
+        self.log("train_accuracy", accuracy, on_step=True, on_epoch=True, prog_bar=True)
+
         return loss
 
     def validation_step(self, batch, batch_idx):
         images, labels = batch
         logits = self(images)
         loss = torch.nn.functional.cross_entropy(logits, labels)
-        self.log("val_loss", loss)
+        self.log("val_loss", loss, on_step=False, on_epoch=True, prog_bar=True)
+        accuracy = self.val_accuracy(logits, labels)
+        self.log("val_accuracy", accuracy, on_step=False, on_epoch=True, prog_bar=True)
         return loss
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
+        optimizer = torch.optim.Adam(self.classifier.parameters(), lr=self.lr, weight_decay=self.weight_decay)
         return optimizer
 
 
@@ -101,22 +122,24 @@ def get_dataloaders(
 ):
     class_mapping = CLASS_MAPPING if label_column == "class_name" else SUPERCLASS_MAPPING
     train_ids, val_ids, test_ids = get_train_val_test_ids("all")
+
     train_image_paths = [
-        path for path in image_paths if metadata.loc[path.name, "patient_id"] in train_ids
+        path for path in image_paths if metadata.loc[path.stem, "patient_id"] in train_ids
     ]
     val_image_paths = [
-        path for path in image_paths if metadata.loc[path.name, "patient_id"] in val_ids
+        path for path in image_paths if metadata.loc[path.stem, "patient_id"] in val_ids
     ]
     test_image_paths = [
-        path for path in image_paths if metadata.loc[path.name, "patient_id"] in test_ids
+        path for path in image_paths if metadata.loc[path.stem, "patient_id"] in test_ids
     ]
-    train_labels = metadata.loc[train_image_paths, label_column].values
-    val_labels = metadata.loc[val_image_paths, label_column].values
-    test_labels = metadata.loc[test_image_paths, label_column].values
 
-    train_labels = [class_mapping[label] for label in train_labels]
-    val_labels = [class_mapping[label] for label in val_labels]
-    test_labels = [class_mapping[label] for label in test_labels]
+    train_labels = [
+        class_mapping[metadata.loc[path.stem, label_column]] for path in train_image_paths
+    ]
+    val_labels = [class_mapping[metadata.loc[path.stem, label_column]] for path in val_image_paths]
+    test_labels = [
+        class_mapping[metadata.loc[path.stem, label_column]] for path in test_image_paths
+    ]
 
     train_dataset = LabelledImageDataset(
         image_paths=train_image_paths, labels=train_labels, transform=preprocess
@@ -159,16 +182,16 @@ def fine_tune_lunghist700(
     gpu_id,
     batch_size,
     num_workers,
-    hidden_dim,
     lr,
     weight_decay,
     max_epochs,
-    output_dim,
     checkpoint_dir,
+    label_column="superclass",
 ):
     input_dir = Path(input_dir).resolve()
     image_paths = list(input_dir.glob("*.png"))
     logger.info(f"Found {len(image_paths)} images in {input_dir}")
+    metadata = pd.read_csv(csv_metadata).set_index("filename")
 
     device = get_device(gpu_id)
     logger.info(f"Using device: {device}")
@@ -176,10 +199,11 @@ def fine_tune_lunghist700(
     logger.info(f"Loading model: {model}")
 
     if model in FOUNDATION_MODEL_NAMES:
-        encoder, preprocess, _, _ = load_foundation_model(model, device)
+        encoder, preprocess, feature_dim, _ = load_foundation_model(model, device)
     elif model_weights_path is not None:
         logger.info(f"Loading model weights from {model_weights_path}")
         encoder, preprocess = load_pretrained_encoder(model, model_weights_path, device=device)
+        feature_dim = 2048
     else:
         raise ValueError(
             f"Model {model} is not supported or model_weights_path is required for this model."
@@ -187,15 +211,21 @@ def fine_tune_lunghist700(
 
     train_dataloader, val_dataloader, test_dataloader = get_dataloaders(
         image_paths=image_paths,
-        metadata=csv_metadata,
+        metadata=metadata,
         preprocess=preprocess,
         batch_size=batch_size,
         num_workers=num_workers,
+        label_column=label_column,
     )
+
+    if label_column == "class_name":
+        output_dim = len(CLASS_MAPPING)
+    else:
+        output_dim = len(SUPERCLASS_MAPPING)
 
     model = FineTuneModel(
         encoder=encoder,
-        input_dim=encoder.output_dim,
+        input_dim=feature_dim,
         output_dim=output_dim,
         lr=lr,
         weight_decay=weight_decay,
@@ -214,7 +244,7 @@ def fine_tune_lunghist700(
         accelerator="gpu",
         devices=[gpu_id],
         precision="16-mixed",
-        check_val_every_n_epoch=10,
+        # check_val_every_n_epoch=10,
         callbacks=[checkpoint_callback, early_stopping_callback],
     )
 
@@ -245,13 +275,11 @@ def fine_tune_lunghist700(
 @click.option(
     "--num-workers", default=0, show_default=True, help="Number of workers for the dataloader."
 )
-@click.option("--hidden-dim", default=128, show_default=True, help="Hidden dimension for MLP.")
 @click.option("--lr", default=1e-3, show_default=True, help="Learning rate for fine-tuning.")
 @click.option(
     "--weight-decay", default=1e-5, show_default=True, help="Weight decay for the optimizer."
 )
 @click.option("--max-epochs", default=20, show_default=True, help="Maximum number of epochs.")
-@click.option("--output-dim", default=2, show_default=True, help="Output dimension for MLP.")
 @click.option(
     "--checkpoint-dir",
     default="checkpoints",
@@ -259,6 +287,7 @@ def fine_tune_lunghist700(
     show_default=True,
     help="Directory to save model checkpoints.",
 )
+@click.option("--label-column", default="superclass", show_default=True, help="Column for labels.")
 def main(
     model,
     model_weights_path,
@@ -267,12 +296,11 @@ def main(
     gpu_id,
     batch_size,
     num_workers,
-    hidden_dim,
     lr,
     weight_decay,
     max_epochs,
-    output_dim,
     checkpoint_dir,
+    label_column,
 ):
     """
     Fine-tune a model on the LungHist700 dataset using an MLP classifier.
@@ -285,12 +313,11 @@ def main(
         gpu_id=gpu_id,
         batch_size=batch_size,
         num_workers=num_workers,
-        hidden_dim=hidden_dim,
         lr=lr,
         weight_decay=weight_decay,
         max_epochs=max_epochs,
-        output_dim=output_dim,
         checkpoint_dir=checkpoint_dir,
+        label_column=label_column,
     )
 
 

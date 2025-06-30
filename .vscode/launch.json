@@ -106,5 +106,34 @@
                 "${workspaceFolder}/configs/tcga_ut/config.yaml",
             ]
         },
+        {
+            "name": "Run Fine-Tune LungHist700 CLI",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/histobench/finetuning/finetune_lunghist700_no_avg_pool.py",
+            "args": [
+                "--model",
+                "resnet50",
+                "--input-dir",
+                "data/LungHist700/LungHist700_10x",
+                "--csv-metadata",
+                "data/LungHist700/metadata.csv",
+                "--gpu-id",
+                "0",
+                "--batch-size",
+                "32",
+                "--num-workers",
+                "4",
+                "--lr",
+                "0.001",
+                "--weight-decay",
+                "0.00001",
+                "--max-epochs",
+                "20",
+                "--checkpoint-dir",
+                "checkpoints"
+            ],
+            "console": "integratedTerminal"
+        }
     ]
 }

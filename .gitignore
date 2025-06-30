@@ -1,6 +1,8 @@
 # Data
 /data/
 /reports/
+/checkpoints/
+/lightning_logs/
 
 # Mac OS-specific storage files
 .DS_Store
