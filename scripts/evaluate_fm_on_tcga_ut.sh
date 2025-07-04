@@ -1,9 +1,10 @@
 #!/bin/bash
 
 # Variables for compute_embeddings_tcga_ut.py
-MODEL="moco_superpixel_cluster_bioptimus"
-# MODEL="UNI2"
-WEIGHTS_PATH="/mnt/nas7/data/Personal/Darya/Checkpoints/superpixel_cluster_clean/cluster_bioptimus_bs256_lr0.003_epochs100_clusters50_moco_superpixel_cluster_bioptimus/best_model.pth"
+# MODEL="moco_superpixel_cluster_bioptimus"
+MODEL="UNI2"
+# WEIGHTS_PATH="/mnt/nas7/data/Personal/Darya/Checkpoints/superpixel_cluster_clean/cluster_bioptimus_bs256_lr0.003_epochs100_clusters50_moco_superpixel_cluster_bioptimus/best_model.pth"
+WEIGHTS_PATH=""
 MAGNIFICATION_KEY=5
 TCGA_UT_DIR="data/tcga-ut"
 GPU_ID=1

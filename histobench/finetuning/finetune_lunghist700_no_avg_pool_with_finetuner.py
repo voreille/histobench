@@ -3,14 +3,17 @@ from pathlib import Path
 
 import click
 from finetuning_scheduler import FinetuningScheduler
+import lightning as L
+from lightning.pytorch import seed_everything
+from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
 import pandas as pd
-import pytorch_lightning as pl
-from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 import torch
 from torch.utils.data import DataLoader
 from torchmetrics.classification import MulticlassAccuracy
+from torchvision import transforms
 
 from histobench.data.torch_datasets import LabelledImageDataset
+from histobench.finetuning.data_augmentations import get_histo_moco_augmentations
 from histobench.models.foundation_models import FOUNDATION_MODEL_NAMES
 from histobench.models.foundation_models import load_model as load_foundation_model
 from histobench.models.load_models import load_pretrained_encoder
@@ -66,7 +69,7 @@ def get_train_val_test_ids(resolution):
     return train_ids, val_ids, test_ids
 
 
-class FineTuneModel(pl.LightningModule):
+class FineTuneModel(L.LightningModule):
     def __init__(self, encoder, input_dim, output_dim, lr, weight_decay, unfreeze_epoch=5):
         super().__init__()
         self.encoder = encoder
@@ -82,7 +85,7 @@ class FineTuneModel(pl.LightningModule):
         for param in self.encoder.parameters():
             param.requires_grad = False
 
-        self.save_hyperparameters(ignore=['encoder'])
+        self.save_hyperparameters(ignore=["encoder"])
 
     def forward(self, x):
         with (
@@ -143,8 +146,11 @@ def get_dataloaders(
     ]
 
     train_dataset = LabelledImageDataset(
-        image_paths=train_image_paths, labels=train_labels, transform=preprocess
+        image_paths=train_image_paths,
+        labels=train_labels,
+        transform=preprocess,
     )
+
     val_dataset = LabelledImageDataset(
         image_paths=val_image_paths, labels=val_labels, transform=preprocess
     )
@@ -188,7 +194,9 @@ def fine_tune_lunghist700(
     max_epochs,
     checkpoint_dir,
     label_column="superclass",
+    seed=42,
 ):
+    seed_everything(seed)
     input_dir = Path(input_dir).resolve()
     image_paths = list(input_dir.glob("*.png"))
     logger.info(f"Found {len(image_paths)} images in {input_dir}")
@@ -209,6 +217,13 @@ def fine_tune_lunghist700(
         raise ValueError(
             f"Model {model} is not supported or model_weights_path is required for this model."
         )
+
+    preprocess = transforms.Compose(
+        [
+            transforms.ToTensor(),
+            transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+        ]
+    )
 
     train_dataloader, val_dataloader, test_dataloader = get_dataloaders(
         image_paths=image_paths,
@@ -238,16 +253,19 @@ def fine_tune_lunghist700(
         monitor="val_loss",
         mode="min",
     )
-    early_stopping_callback = EarlyStopping(monitor="val_loss", patience=5, mode="min")
-    finetuning_callback = FinetuningScheduler(gen_ft_sched_only=True)
+    # early_stopping_callback = EarlyStopping(monitor="val_loss", patience=5, mode="min")
+    finetuning_callback = FinetuningScheduler(
+        ft_schedule="/home/valentin/workspaces/histobench/configs/LungHist700_finetuning/FineTuneModel_ft_schedule.yaml"
+    )
 
-    trainer = pl.Trainer(
+    trainer = L.Trainer(
         max_epochs=max_epochs,
         accelerator="gpu",
         devices=[gpu_id],
         precision="16-mixed",
         # check_val_every_n_epoch=10,
-        callbacks=[checkpoint_callback, early_stopping_callback, finetuning_callback],
+        # callbacks=[checkpoint_callback, early_stopping_callback, finetuning_callback],
+        callbacks=[checkpoint_callback, finetuning_callback],
     )
 
     trainer.fit(model, train_dataloader, val_dataloader)

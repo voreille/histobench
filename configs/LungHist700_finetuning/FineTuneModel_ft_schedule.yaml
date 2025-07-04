@@ -1,0 +1,323 @@
+0:
+  params:
+  - classifier.bias
+  - classifier.weight
+1:
+  params:
+  - encoder.layer4.2.bn3.bias
+  - encoder.layer4.2.bn3.weight
+2:
+  params:
+  - encoder.layer4.2.conv3.weight
+  - encoder.layer4.2.bn2.bias
+3:
+  params:
+  - encoder.layer4.2.bn2.weight
+  - encoder.layer4.2.conv2.weight
+4:
+  params:
+  - encoder.layer4.2.bn1.bias
+  - encoder.layer4.2.bn1.weight
+5:
+  params:
+  - encoder.layer4.2.conv1.weight
+  - encoder.layer4.1.bn3.bias
+6:
+  params:
+  - encoder.layer4.1.bn3.weight
+  - encoder.layer4.1.conv3.weight
+7:
+  params:
+  - encoder.layer4.1.bn2.bias
+  - encoder.layer4.1.bn2.weight
+8:
+  params:
+  - encoder.layer4.1.conv2.weight
+  - encoder.layer4.1.bn1.bias
+9:
+  params:
+  - encoder.layer4.1.bn1.weight
+  - encoder.layer4.1.conv1.weight
+10:
+  params:
+  - encoder.layer4.0.downsample.1.bias
+  - encoder.layer4.0.downsample.1.weight
+11:
+  params:
+  - encoder.layer4.0.downsample.0.weight
+  - encoder.layer4.0.bn3.bias
+12:
+  params:
+  - encoder.layer4.0.bn3.weight
+  - encoder.layer4.0.conv3.weight
+13:
+  params:
+  - encoder.layer4.0.bn2.bias
+  - encoder.layer4.0.bn2.weight
+14:
+  params:
+  - encoder.layer4.0.conv2.weight
+  - encoder.layer4.0.bn1.bias
+15:
+  params:
+  - encoder.layer4.0.bn1.weight
+  - encoder.layer4.0.conv1.weight
+16:
+  params:
+  - encoder.layer3.5.bn3.bias
+  - encoder.layer3.5.bn3.weight
+17:
+  params:
+  - encoder.layer3.5.conv3.weight
+  - encoder.layer3.5.bn2.bias
+18:
+  params:
+  - encoder.layer3.5.bn2.weight
+  - encoder.layer3.5.conv2.weight
+19:
+  params:
+  - encoder.layer3.5.bn1.bias
+  - encoder.layer3.5.bn1.weight
+20:
+  params:
+  - encoder.layer3.5.conv1.weight
+  - encoder.layer3.4.bn3.bias
+21:
+  params:
+  - encoder.layer3.4.bn3.weight
+  - encoder.layer3.4.conv3.weight
+22:
+  params:
+  - encoder.layer3.4.bn2.bias
+  - encoder.layer3.4.bn2.weight
+23:
+  params:
+  - encoder.layer3.4.conv2.weight
+  - encoder.layer3.4.bn1.bias
+24:
+  params:
+  - encoder.layer3.4.bn1.weight
+  - encoder.layer3.4.conv1.weight
+25:
+  params:
+  - encoder.layer3.3.bn3.bias
+  - encoder.layer3.3.bn3.weight
+26:
+  params:
+  - encoder.layer3.3.conv3.weight
+  - encoder.layer3.3.bn2.bias
+27:
+  params:
+  - encoder.layer3.3.bn2.weight
+  - encoder.layer3.3.conv2.weight
+28:
+  params:
+  - encoder.layer3.3.bn1.bias
+  - encoder.layer3.3.bn1.weight
+29:
+  params:
+  - encoder.layer3.3.conv1.weight
+  - encoder.layer3.2.bn3.bias
+30:
+  params:
+  - encoder.layer3.2.bn3.weight
+  - encoder.layer3.2.conv3.weight
+31:
+  params:
+  - encoder.layer3.2.bn2.bias
+  - encoder.layer3.2.bn2.weight
+32:
+  params:
+  - encoder.layer3.2.conv2.weight
+  - encoder.layer3.2.bn1.bias
+33:
+  params:
+  - encoder.layer3.2.bn1.weight
+  - encoder.layer3.2.conv1.weight
+34:
+  params:
+  - encoder.layer3.1.bn3.bias
+  - encoder.layer3.1.bn3.weight
+35:
+  params:
+  - encoder.layer3.1.conv3.weight
+  - encoder.layer3.1.bn2.bias
+36:
+  params:
+  - encoder.layer3.1.bn2.weight
+  - encoder.layer3.1.conv2.weight
+37:
+  params:
+  - encoder.layer3.1.bn1.bias
+  - encoder.layer3.1.bn1.weight
+38:
+  params:
+  - encoder.layer3.1.conv1.weight
+  - encoder.layer3.0.downsample.1.bias
+39:
+  params:
+  - encoder.layer3.0.downsample.1.weight
+  - encoder.layer3.0.downsample.0.weight
+40:
+  params:
+  - encoder.layer3.0.bn3.bias
+  - encoder.layer3.0.bn3.weight
+41:
+  params:
+  - encoder.layer3.0.conv3.weight
+  - encoder.layer3.0.bn2.bias
+42:
+  params:
+  - encoder.layer3.0.bn2.weight
+  - encoder.layer3.0.conv2.weight
+43:
+  params:
+  - encoder.layer3.0.bn1.bias
+  - encoder.layer3.0.bn1.weight
+44:
+  params:
+  - encoder.layer3.0.conv1.weight
+  - encoder.layer2.3.bn3.bias
+45:
+  params:
+  - encoder.layer2.3.bn3.weight
+  - encoder.layer2.3.conv3.weight
+46:
+  params:
+  - encoder.layer2.3.bn2.bias
+  - encoder.layer2.3.bn2.weight
+47:
+  params:
+  - encoder.layer2.3.conv2.weight
+  - encoder.layer2.3.bn1.bias
+48:
+  params:
+  - encoder.layer2.3.bn1.weight
+  - encoder.layer2.3.conv1.weight
+49:
+  params:
+  - encoder.layer2.2.bn3.bias
+  - encoder.layer2.2.bn3.weight
+50:
+  params:
+  - encoder.layer2.2.conv3.weight
+  - encoder.layer2.2.bn2.bias
+51:
+  params:
+  - encoder.layer2.2.bn2.weight
+  - encoder.layer2.2.conv2.weight
+52:
+  params:
+  - encoder.layer2.2.bn1.bias
+  - encoder.layer2.2.bn1.weight
+53:
+  params:
+  - encoder.layer2.2.conv1.weight
+  - encoder.layer2.1.bn3.bias
+54:
+  params:
+  - encoder.layer2.1.bn3.weight
+  - encoder.layer2.1.conv3.weight
+55:
+  params:
+  - encoder.layer2.1.bn2.bias
+  - encoder.layer2.1.bn2.weight
+56:
+  params:
+  - encoder.layer2.1.conv2.weight
+  - encoder.layer2.1.bn1.bias
+57:
+  params:
+  - encoder.layer2.1.bn1.weight
+  - encoder.layer2.1.conv1.weight
+58:
+  params:
+  - encoder.layer2.0.downsample.1.bias
+  - encoder.layer2.0.downsample.1.weight
+59:
+  params:
+  - encoder.layer2.0.downsample.0.weight
+  - encoder.layer2.0.bn3.bias
+60:
+  params:
+  - encoder.layer2.0.bn3.weight
+  - encoder.layer2.0.conv3.weight
+61:
+  params:
+  - encoder.layer2.0.bn2.bias
+  - encoder.layer2.0.bn2.weight
+62:
+  params:
+  - encoder.layer2.0.conv2.weight
+  - encoder.layer2.0.bn1.bias
+63:
+  params:
+  - encoder.layer2.0.bn1.weight
+  - encoder.layer2.0.conv1.weight
+64:
+  params:
+  - encoder.layer1.2.bn3.bias
+  - encoder.layer1.2.bn3.weight
+65:
+  params:
+  - encoder.layer1.2.conv3.weight
+  - encoder.layer1.2.bn2.bias
+66:
+  params:
+  - encoder.layer1.2.bn2.weight
+  - encoder.layer1.2.conv2.weight
+67:
+  params:
+  - encoder.layer1.2.bn1.bias
+  - encoder.layer1.2.bn1.weight
+68:
+  params:
+  - encoder.layer1.2.conv1.weight
+  - encoder.layer1.1.bn3.bias
+69:
+  params:
+  - encoder.layer1.1.bn3.weight
+  - encoder.layer1.1.conv3.weight
+70:
+  params:
+  - encoder.layer1.1.bn2.bias
+  - encoder.layer1.1.bn2.weight
+71:
+  params:
+  - encoder.layer1.1.conv2.weight
+  - encoder.layer1.1.bn1.bias
+72:
+  params:
+  - encoder.layer1.1.bn1.weight
+  - encoder.layer1.1.conv1.weight
+73:
+  params:
+  - encoder.layer1.0.downsample.1.bias
+  - encoder.layer1.0.downsample.1.weight
+74:
+  params:
+  - encoder.layer1.0.downsample.0.weight
+  - encoder.layer1.0.bn3.bias
+75:
+  params:
+  - encoder.layer1.0.bn3.weight
+  - encoder.layer1.0.conv3.weight
+76:
+  params:
+  - encoder.layer1.0.bn2.bias
+  - encoder.layer1.0.bn2.weight
+77:
+  params:
+  - encoder.layer1.0.conv2.weight
+  - encoder.layer1.0.bn1.bias
+78:
+  params:
+  - encoder.layer1.0.bn1.weight
+  - encoder.layer1.0.conv1.weight
+79:
+  params:
+  - encoder.bn1.bias
+  - encoder.bn1.weight
+80:
+  params:
+  - encoder.conv1.weight
